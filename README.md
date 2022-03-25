@@ -1,4 +1,4 @@
-# Arch linux system backup
+# Arch linux system snapshots and backup
 A collection of useful scripts and notes I use to backup my arch-linux system as well as other data.
 
 ## System snapshots and backups
@@ -79,12 +79,17 @@ sudo btrbk -c /home/weygoldt/Data/projects/backup-arch/btrbk.conf -v snapshot
 The output should indicate that a snapshot was taken but no backup was taken. The snapshot should be stored at `/mnt/archlinux`. With the snapshots in place, the first backup can be created now with
 ```sh
 # to make a backup
-sudo btrbk -c /home/weygoldt/Data/projects/backup-arch/btrbk.conf -v -n resume
+sudo btrbk -c /home/weygoldt/Data/projects/backup-arch/btrbk.conf -v resume
 ```
 Note that the first backup will **not** be incremental, because logically, only the following backups can be incremental. If both snapshots and backups can be generated manullay, this can be implemented in a cronjob.
 
 #### 4. Automate snapshots and backups
+Configure a [script](btrbk.sh) as a cron job to run snapshots and backups hourly by adding an executable shell script.
 
+```sh
+#!/bin/bash
+exec /usr/bin/btrbk -q -c /home/weygoldt/Data/projects/backup-arch/btrbk.conf run
+```
 
 ## Data backups
 In addition, I backup valuable data on the secondary internal device as well as an external harddrive. 
