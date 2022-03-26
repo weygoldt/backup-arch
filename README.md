@@ -1,5 +1,7 @@
-# Arch linux system snapshots and backup
+# My arch linux system snapshots and backup setup
 A collection of useful scripts and notes I use to backup my arch-linux system as well as other data.
+
+**Disclaimer:** This was created for personal documentation of my setup to make my setup more reproducible. Do not use this as a guide. In addition, this is currently very messy and I will update it once I have time.
 
 ## System snapshots and backups
 This manual describes how to schedule hourly snapshots on the live system on the system partition and automatically backup the snapshots incrementally onto a secondary drive.
@@ -101,7 +103,17 @@ To list recent snapshots and their backups, use `sudo btrbk -c "$btrbkpath" list
 ... this section is under construction.
 
 ### Restoring from snapshots or backups
-Restoring a subvolume has to be done manually. Assume the system failed to boot. To drop to a tty use `ctrl+alt+f2` and login as root. 
+Restoring a subvolume has to be done manually. Assume the system failed to boot. To drop to a tty use `ctrl+alt+f2` and login as root. The general procedure is as follows:
+
+**Restore snapshot**
+- Identify latest working snapshot
+- Move broken subolume away (e.g. rename)
+- Create read-write subvol from read-only snapshot with the name of the broken subvolume
+
+**Restore backup**
+- Identify latest working backup
+- Send backed up snapshot to broken root filesystem
+- Proceed as with a snapshot
 
 #### 1. Identify subvolume to restore from
 List available snapshots with
@@ -116,15 +128,42 @@ btrbk -c /path/to/btrbk.conf list latest
 btrbk ls /
 btrbk ls -L /
 ```
-From the list identify the snapshot to restore, e.g. `/mnt/archlinux/btrbk-snapshots/@.sometime`.
+From the list identify the snapshot to restore, e.g. `/mnt/archlinux/btrbk-snapshots/@.latest`.
 
-#### 2. Restore backup
+#### 2. Restore backup (under construction)
 (skip if restoring from a snapshot)
-I am still unsure how this works. This only sends the lates snapshot, which does not work since the backup is incremental (?).
+To send a snaptshot from a locally mounted backup disk to a destroyed root partition, mount the root device (here at /mnt/archlinux) and send the snapshot to the root device by
 ```sh
-# send the newest snapshot to the root
-btrfs send /mnt/backups/@.sometime | btrfs receive /mnt/archlinux/
+btrfs send /mnt/backups/@.latest | btrfs receive /mnt/archlinux/
 ```
 
+If the root device still has a functional parent snapshot (e.g. I accidentally deleted or somehow lost the latest snapshot), the snapshot and backup-pair should be listed under snapshot_subvol and target_subvol e.g. when running `btrbk list all`
+```sh
+btrfs send -p /mnt/send/parent /mnt/backups/@.latest | btrfs receive /mnt/archlinux/
+```
+**NOTE:** As of yet, I am unsure what exactly a parent snapshot is. According to the [docs](https://btrfs.readthedocs.io/en/latest/btrfs-subvolume.html#subvolume-and-snapshot) _parent here means the subvolume which contains this subvolume_. This would mean that all snapshots taken before should be parents. However if there is a gap in the "snapshot-chain" it could happen that changes that happened during that gap are not present in the latest "child" snapshot and thus are lost (?).
+
+#### 3. Create read-write subvolume 
+To create a read-write subvolume, just create a read-write snapshot of the snapshot you just moved into the root directory from a backup or the lates snapshot in the snapshot folder.
+```sh
+# first move broken subvolume away, e.g. the root if I broke the system
+mv /mnt/archlinux/@ /mnt/archlinux/@.BROKEN
+
+# then create a read-write subvol
+btrfs subvolume snapshot /mnt/archlinux/@.latest /mnt/archlinux/@
+```
+
+Now we should be able to boot into the new @ subvolume as the system root directory.
+
+#### 4. Cleanup
+If all went fine, delete the broken subvolume.
+```sh
+btrfs subvolume delete /mnt/archlinux/@.BROKEN
+```
+Keep the `@.latest` on both disks until a new snapshot is created to keep the incremental chain alive.
+
 ## Data backups
-In addition, I backup valuable data on the secondary internal device as well as an external harddrive. 
+All valuable data is incrementally backupped via snapshots of the home directory. Additionally, a [script](./ext-databackup.sh) is used to automatically sync a folder to an external SSD.
+
+## Project backups
+For another backup and for version control, repositories I casually modify are automatically pushed to Github using my [autopush script](autopush-git.sh).
