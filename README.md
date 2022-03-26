@@ -63,32 +63,67 @@ sudo mkdir /mnt/backups/btrbk-backups
 ```
 
 ##### 2. Create a btrbk [configuration file](btrbk.conf)
-I used the provided example file (stored in `/etc/btrbk/btrbk.conf.example`)and store it in in `/home/weygoldt/Data/projects/backup-arch/btrbk.conf`.
+I used the provided example file (stored in `/etc/btrbk/btrbk.conf.example`)and store it in in `/home/weygoldt/Data/projects/backup-arch/btrbk.conf`. Optionally, the btrbk.conf file can be added to `/etc/btrbk/` using a symlink. This makes things much easier:
+```sh
+sudo ln -s /home/weygoldt/Data/projects/backup-arch/btrbk.conf /ect/btrbk/btrbk.conf
+```
 
 ##### 3. Test if the config file works
 Run btrbk with 
 ```sh
-sudo btrbk -c /home/weygoldt/Data/projects/backup-arch/btrbk.conf -v -n run
+sudo btrbk -v -n run
 ```
  for a dry-run. The `-c` flag adds the path to the config file, the `-v` flag adds verbose output and the `-n` flag activates dry run. If no errors occur, the first real snapshots can be taken with
 
 ```sh
 # to make a snapshot
-sudo btrbk -c /home/weygoldt/Data/projects/backup-arch/btrbk.conf -v snapshot
+sudo btrbk -v snapshot
 ```
 The output should indicate that a snapshot was taken but no backup was taken. The snapshot should be stored at `/mnt/archlinux`. With the snapshots in place, the first backup can be created now with
 ```sh
 # to make a backup
-sudo btrbk -c /home/weygoldt/Data/projects/backup-arch/btrbk.conf -v resume
+sudo btrbk -v resume
 ```
 Note that the first backup will **not** be incremental, because logically, only the following backups can be incremental. If both snapshots and backups can be generated manullay, this can be implemented in a cronjob.
 
-#### 4. Automate snapshots and backups
+##### 4. Scheduled snapshots and backups
 Configure a [script](btrbk.sh) as a cron job to run snapshots and backups hourly by adding an executable shell script.
 
+Just add the following to a file in `/etc/cron.hourly/btrbk` and `sudo chmod +x btrbk` to make it executable. The script can also be called manually.
 ```sh
 #!/bin/bash
-exec /usr/bin/btrbk -q -c /home/weygoldt/Data/projects/backup-arch/btrbk.conf run
+exec /usr/bin/btrbk -q run
+```
+
+To list recent snapshots and their backups, use `sudo btrbk -c "$btrbkpath" list latest` to list the latest snapshot and respective backup, which should refresh hourly.
+
+##### 5. Snapshots before system upgrades
+... this section is under construction.
+
+### Restoring from snapshots or backups
+Restoring a subvolume has to be done manually. Assume the system failed to boot. To drop to a tty use `ctrl+alt+f2` and login as root. 
+
+#### 1. Identify subvolume to restore from
+List available snapshots with
+```sh
+# list snapshots
+btrbk -c /path/to/btrbk.conf list snapshots
+# list snapshots and backups
+btrbk -c /path/to/btrbk.conf list snapshots
+# list recent
+btrbk -c /path/to/btrbk.conf list latest
+# alternative: list all subvolumes
+btrbk ls /
+btrbk ls -L /
+```
+From the list identify the snapshot to restore, e.g. `/mnt/archlinux/btrbk-snapshots/@.sometime`.
+
+#### 2. Restore backup
+(skip if restoring from a snapshot)
+I am still unsure how this works. This only sends the lates snapshot, which does not work since the backup is incremental (?).
+```sh
+# send the newest snapshot to the root
+btrfs send /mnt/backups/@.sometime | btrfs receive /mnt/archlinux/
 ```
 
 ## Data backups
