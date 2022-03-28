@@ -37,6 +37,9 @@ pushobsidian () {
     git push
 }
 
+# add ssh
+ssh-add /home/weygoldt/.ssh/id_ed25519 
+
 while true
 do
     read -r -p $'\e[1;32mCommit all tracked and push dotfiles (y/n)?\e[0m' choice

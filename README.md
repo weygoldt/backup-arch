@@ -162,6 +162,29 @@ btrfs subvolume delete /mnt/archlinux/@.BROKEN
 ```
 Keep the `@.latest` on both disks until a new snapshot is created to keep the incremental chain alive.
 
+## Btrfs filesystem errors
+Btrfs has great snapshot abilities, but because all files are checksummed, easily runs into errors and then refuses to mount. The first step to fix such issues are to "scrub" the files system, if this does not work try to boot with a backup btrfs root tree. Do **not** run `btrfs check --repair`!
+```sh
+#scrub
+btrfs scrub start /dev/sdaX
+# monitor with
+btrfs scrub status /dev/sdaX
+
+# backup root tree
+mount -o usebackuproot /dev/sdaX /mnt
+```
+If something catastrophic happens and an un-backupped btrfs filesystem is corrupted, the data that is still left on the device and can be recovered can be transferred to a second device with 
+```sh
+btrfs restore /dev/broken /mnt/usbdrive
+```
+There are some additional rescue options that can be used to restore the file system in place. If the above steps where all taken (including the restore!) try the following
+```sh
+btrfs rescue super-recover /dev/broken
+btrfs rescue zero-log /dev/broken
+btrfs rescue fix-device-size /dev/broken
+btrfs rescue chunk-recover /dev/broke # very slow
+```
+
 ## Data backups
 All valuable data is incrementally backupped via snapshots of the home directory. Additionally, a [script](./ext-databackup.sh) is used to automatically sync a folder to an external SSD.
 
