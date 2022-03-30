@@ -4,17 +4,25 @@ A collection of useful scripts and notes I use to backup my arch-linux system as
 **Disclaimer:** This was created for personal documentation of my setup to make my setup more reproducible. Do not use this as a guide. In addition, this is currently very messy and I will update it once I have time.
 
 ## Contents
-1. [System snapshots and backups](#system-snapshots-and-backups)
-   1. [Prerequisites](#prerequisites)
-   2. [Partitioning](#partitioning)
-   3. [BTRBK](#btrbk)
-      1. [Setup]()
-      2. [Testing]()
-      3. [Scheduling]()
-   4. [Restoring]()
-   5. [BTRFS file system notes]()
-2. [Data backup]()
-3. [Git autopush]()
+- [My arch linux system snapshots and backup setup](#my-arch-linux-system-snapshots-and-backup-setup)
+  - [Contents](#contents)
+  - [System snapshots and backups](#system-snapshots-and-backups)
+    - [Prerequisites](#prerequisites)
+    - [Partitioning](#partitioning)
+        - [1. Mount the root of the primary btrfs device.](#1-mount-the-root-of-the-primary-btrfs-device)
+        - [2. Create a btrfs partition on the secondary drive.](#2-create-a-btrfs-partition-on-the-secondary-drive)
+    - [BTRBK](#btrbk)
+      - [1. Setup](#1-setup)
+      - [2. Test the setup](#2-test-the-setup)
+      - [3. Scheduling snapshots and backups](#3-scheduling-snapshots-and-backups)
+    - [Restoring from snapshots or backups](#restoring-from-snapshots-or-backups)
+      - [1. Identify subvolume to restore from](#1-identify-subvolume-to-restore-from)
+      - [2. Restore backup (under construction)](#2-restore-backup-under-construction)
+      - [3. Create read-write subvolume](#3-create-read-write-subvolume)
+      - [4. Cleanup](#4-cleanup)
+  - [Btrfs filesystem errors](#btrfs-filesystem-errors)
+  - [Data backups](#data-backups)
+  - [Project backups](#project-backups)
 
 ## System snapshots and backups
 Takes btrfs snapshots of a root and home btrfs subvolume on the root device and backs them up incrementally to a secondary device.
