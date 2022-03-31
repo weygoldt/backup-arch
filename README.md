@@ -1,7 +1,10 @@
 # My arch linux system snapshots and backup setup
-A collection of useful scripts and notes I use to backup my arch-linux system as well as other data.
+A collection of useful scripts and notes I use to backup my arch-linux system 
+as well as other data.
 
-**Disclaimer:** This was created for personal documentation of my setup to make my setup more reproducible. Do not use this as a guide. In addition, this is currently very messy and I will update it once I have time.
+**Disclaimer:** This was created for personal documentation of my setup to make 
+my setup more reproducible. Do not use this as a guide. In addition, this is 
+currently very messy and I will update it once I have time.
 
 ## Contents
 - [My arch linux system snapshots and backup setup](#my-arch-linux-system-snapshots-and-backup-setup)
@@ -25,7 +28,8 @@ A collection of useful scripts and notes I use to backup my arch-linux system as
   - [Project backups](#project-backups)
 
 ## System snapshots and backups
-Takes btrfs snapshots of a root and home btrfs subvolume on the root device and backs them up incrementally to a secondary device.
+Takes btrfs snapshots of a root and home btrfs subvolume on the root device and 
+backs them up incrementally to a secondary device.
 
 ### Prerequisites
 - System partition formated as btrfs with two subvolumes, `@` and `@home` mounted at `/` and `/home` respectively (see [install-arch](https://github.com/weygoldt/install-arch)).
@@ -34,13 +38,22 @@ Takes btrfs snapshots of a root and home btrfs subvolume on the root device and 
 
 ### Partitioning
 ##### 1. Mount the root of the primary btrfs device. 
-Btrbk needs access to the root directory to create a directory e.g. `btrbk-snapshots` where the snapshots are stored next to the two subvolumes of the system. In addition to the two subdirectories `@` (system) and `@home` (user dirs), which are mounted at startup, we need to mount the root of the btrfs partition as well. The root of a btrfs filesystem always has the `subvolid=5`, which we can use to mount it.
+Btrbk needs access to the root directory to create a directory e.g. 
+`btrbk-snapshots` where the snapshots are stored next to the two subvolumes 
+of the system. In addition to the two subdirectories `@` (system) and `@home` 
+(user dirs), which are mounted at startup, we need to mount the root of the 
+btrfs partition as well. The root of a btrfs filesystem always has the 
+`subvolid=5`, which we can use to mount it.
 ```sh
 sudo mkdir /mnt/archlinux # named after my system partition label
 # mount btrfs root partition:
 sudo mount -o defaults,subvolid=5 /dev/nvme0n1p2 /mnt/archlinux
 ``` 
-Add the mountpoint to `fstab` and check if successful by `sudo mount -a`. The directory `/mnt/archlinux` should now include the two subvolumes `@` and `@home`. Alternatively, the mound command could also be included into the configuration file later to only mount the root partition when a snapshot is performed.
+Add the mountpoint to `fstab` and check if successful by `sudo mount -a`. 
+The directory `/mnt/archlinux` should now include the two subvolumes `@` 
+and `@home`. Alternatively, the mound command could also be included into 
+the configuration file later to only mount the root partition when a snapshot 
+is performed.
 
 ##### 2. Create a btrfs partition on the secondary drive. 
 Now we need to set up the secondary internal (or any external) device to receive the backups of the snapshots. I am using `dev/sda`.
@@ -88,7 +101,13 @@ Add the two subvolumes to the `fstab` using the `UUID` of the parent partition. 
 sudo mkdir /mnt/archlinux/btrbk-snapshots
 sudo mkdir /mnt/backups/btrbk-backups
 ```
-Create a btrbk [configuration file](btrbk.conf) and store it in `/etc/btrbk/btrbk.conf`. I used the provided example file (stored in `/etc/btrbk/btrbk.conf.example`)and store it in in `/home/weygoldt/Data/projects/backup-arch/btrbk.conf` to be able to track it with git. Either this path needs to be hard-coded into the run-script or you can symlink it to the location it is supposed to be. Always use the full path when creating a symlink. This makes things much easier:
+Create a btrbk [configuration file](btrbk.conf) and store it in 
+`/etc/btrbk/btrbk.conf`. I used the provided example file (stored in 
+`/etc/btrbk/btrbk.conf.example`)and store it in in 
+`/home/weygoldt/Data/projects/backup-arch/btrbk.conf` to be able to track it 
+with git. Either this path needs to be hard-coded into the run-script or you 
+can symlink it to the location it is supposed to be. Always use the full path 
+when creating a symlink. This makes things much easier:
 ```sh
 # make a symlink:
 sudo ln -s /home/weygoldt/Data/projects/backup-arch/btrbk.conf /ect/btrbk/btrbk.conf
@@ -102,25 +121,53 @@ sudo btrbk -v -n run
 # If conf is somewhere else:
 sudo btrbk -c <path-to-conf> -v -n run
 ```
- for a dry-run. The `-c` flag adds the path to the config file, the `-v` flag adds verbose output and the `-n` flag activates dry run. If no errors occur, the first real snapshots can be taken with
+ for a dry-run. The `-c` flag adds the path to the config file, the `-v` flag 
+ adds verbose output and the `-n` flag activates dry run. If no errors occur, 
+ the first real snapshots can be taken with
 
 ```sh
 # to make a snapshot
 sudo btrbk -v snapshot
 ```
-The output should indicate that a snapshot was taken but no backup was taken. The snapshot should be stored at `/mnt/archlinux/btrbk-snapshots`. With the snapshots in place, the first backup can be created now with
+The output should indicate that a snapshot was taken but no backup was taken. 
+The snapshot should be stored at `/mnt/archlinux/btrbk-snapshots`. With the 
+snapshots in place, the first backup can be created now with
 ```sh
 # to make a backup
 sudo btrbk -v resume
 ```
-This will require some time since the first backup will **not** be incremental, because logically, only the following backups can be incremental. If both snapshots and backups can be generated manually, this can be automated using  run-script in a cron-job.
+This will require some time since the first backup will **not** be incremental, 
+because logically, only the following backups can be incremental. If both 
+snapshots and backups can be generated manually, this can be automated using  
+run-script in a cron-job.
 
 #### 3. Scheduling snapshots and backups
-Configure a [script](btrbk.sh) as a cron job to run snapshots and backups hourly by adding an executable shell script. Add the following to a file in `/etc/cron.hourly/` and `sudo chmod +x btrbk.sh` to make it executable. Again, I symlinked it to the cron-dir. The script can also be called manually.
+Configure a [script](btrbk) as a cron job to run snapshots and backups hourly 
+by adding a shell script. 
+
+File: /home/weygoldt/Data/system/backup-arch/btrbk
 ```sh
 #!/bin/bash
 exec /usr/bin/btrbk -q run # -q for quiet
 ```
+
+Run `sudo chmod +x btrbk` to make it executable. The 
+path to the script can now be added to the root user crontab like this:
+
+```sh
+su # change to root user
+crontab -e # edit crontab, might have to set editor first
+```
+
+Then add the line
+
+```sh
+0 * * * * /home/weygoldt/Data/system/backup-arch/btrbk
+```
+
+To run the script to which the path is pointing at every full hour.
+
+This should run a snapshot and backup pair quietly at every full hour.
 
 To list recent snapshots and their backups, use `sudo btrbk list latest` or `... list all` to list the latest or all snapshots and respective backups, which should refresh hourly. If the conf is not symlinked, add the `-c` flag and the path again.
 
