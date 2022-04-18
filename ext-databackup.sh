@@ -18,6 +18,9 @@
 SOURCEDIR='/home/weygoldt/Data/'      # Source of the files to back up
 DESTDIR='/patrick/'                   # Destination of backup on drive
 UUID="167E-D62E"                      # UUID of backup harddrive
+EXCLUDE='/home/weygoldt/Data/system/backup-arch/rsync-exclude.txt'
+
+cd "$SOURCEDIR"
 
 echo # to make a new line
 echo "Checking if devices are mounted ..." 
@@ -36,18 +39,33 @@ MNTPNT=$(df | grep "^$(readlink -f /dev/disk/by-uuid/$UUID) " |sed 's/^[^%]*% \+
 # Create full sink directory by appending the folder in drive to the mountpoint that was obtained from the UUID
 SINKDIR="$MNTPNT$DESTDIR"
 
-sleep 3s
+# Promts for dismounting efishdata.
+while true
+do
+    read -r -p $'\e[1;32mMay I dismount efishdata-local (y/n)?\e[0m' choice
+    case "$choice" in
+      [nN][oO]|[nN]) 
+        echo "No"
+        break;;
+      [yY][eE][sS]|[yY]) 
+        sudo umount /home/weygoldt/Data/uni/efish/efishdata-local
+        break;;
+      *) echo 'Response not valid';;
+    esac
+done
+
+sleep 1s
 
 printf "\e[1;32mThe following files will be synchronized:\e[0m"
 echo # to make a new line
 echo # to make a new line
-sleep 3s
+sleep 1s
 
 # print differences
 # not using -a to prevent permissions, groups and owners to be transferred between case-sensitive 
 # and case-insensitive filesystems. This would prevent rsync from allawys synchronizing all. 
 # All other switches included in -a are active.
-rsync -rltzviPn --delete "$SOURCEDIR" "$SINKDIR"
+rsync -rtzviPn --delete --exclude-from="$EXCLUDE" "$SOURCEDIR" "$SINKDIR" | grep efishdata
 
 echo # to make a new line
 # print source and sink to confirm the operation
@@ -65,7 +83,7 @@ do
         echo "Aborting ..."
         exit 1;;
       [yY][eE][sS]|[yY]) 
-        rsync -rltzviP --delete "$SOURCEDIR" "$SINKDIR"
+        rsync -rtzviP --delete --exclude-from="$EXCLUDE" "$SOURCEDIR" "$SINKDIR"
         break;;
       *) echo 'Response not valid';;
     esac
@@ -79,7 +97,7 @@ echo # to make a new line
 sleep 3s
 
 # print new differences after synchronization. This should be empty.
-rsync -rltzviPn --delete "$SOURCEDIR" "$SINKDIR"
+rsync -rtzviPn --delete --exclude-from="$EXCLUDE" "$SOURCEDIR" "$SINKDIR"
 
 echo # to make a new line
 
@@ -93,6 +111,21 @@ do
         break;;
       [yY][eE][sS]|[yY]) 
         umount "UUID=$UUID"
+        break;;
+      *) echo 'Response not valid';;
+    esac
+done
+
+# Promts for dismounting efishdata.
+while true
+do
+    read -r -p $'\e[1;32mMay I remount efishdata-local (y/n)?\e[0m' choice
+    case "$choice" in
+      [nN][oO]|[nN]) 
+        echo "No"
+        break;;
+      [yY][eE][sS]|[yY]) 
+        sudo mount -a
         break;;
       *) echo 'Response not valid';;
     esac
